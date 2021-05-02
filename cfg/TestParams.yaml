@@ -1,0 +1,23 @@
+# monitors:
+#   - pico_flexx_left_points: {
+#       topic: "pico_flexx_left/points",
+#       expected_hz: 10,
+#       tolerance_hz: 2
+#   } 
+#   - pico_flexx_left_trav: {
+#       topic: "pico_flexx_left/points/cost_norm_cloud",
+#       expected_hz: 10,
+#       tolerance_hz: 2
+#   } 
+
+monitors:
+    - {
+        topic: "test_topic",
+        expected_hz: 10.0,
+        tolerance_hz: 2.0
+    } 
+    - {
+        topic: "test_topic2",
+        expected_hz: 10.0,
+        tolerance_hz: 2.0
+    }
