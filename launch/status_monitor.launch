@@ -1,6 +1,6 @@
 <launch>
     <arg name="param_file" default="$(find ros_status_monitor)/cfg/TestParams.yaml"/>
-    <arg name="rate"       default="1"/>
+    <arg name="rate"       default="10"/>
 
     <rosparam file="$(arg param_file)"/>
     <node pkg="ros_status_monitor" type="status_monitor_node" name="test_status_monitor" output="screen" respawn="true">

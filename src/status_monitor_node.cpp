@@ -1,12 +1,14 @@
 #include <ros_type_introspection/ros_introspection.hpp>
 #include <ros/ros.h>
 #include <topic_tools/shape_shifter.h>
+#include <std_msgs/Float32.h>
 
 using namespace RosIntrospection;
 using topic_tools::ShapeShifter;
 
 XmlRpc::XmlRpcValue monitor_list;
 std::map<std::string,std::pair<ros::Time,double>> monitor_log; // topic_name, last_time, rate at last_time
+ros::Publisher freq;
 
 void topicCallback(const ShapeShifter::ConstPtr& msg,
                    const std::string &topic_name,
@@ -19,6 +21,9 @@ void topicCallback(const ShapeShifter::ConstPtr& msg,
     ros::Time last_time = monitor_log_pair->first;
     double diff_time = curr_time.toSec()-last_time.toSec();
     double last_rate = 1.0/diff_time;
+    std_msgs::Float32 msg;
+    msg.data = last_rate;
+    freq.publish(msg);
     monitor_log_pair->first = curr_time; // update msg last_time
     monitor_log_pair->second = last_rate; // update msg rate at last_time
     return;
@@ -103,8 +108,8 @@ int main(int argc, char** argv){
     Parser parser;
     boost::function<void(const ShapeShifter::ConstPtr&)> callback = [&parser, topic_name](const ShapeShifter::ConstPtr& msg){topicCallback(msg, topic_name, parser);};
     ros::Subscriber subscriber = nh.subscribe(topic_name, 10, callback);
-
     subscribers.push_back(subscriber);
+    freq = nh.advertise<std_msgs::Float32>("freq", 10);
 
     ROS_INFO("Added monitor to %s.", topic_name.c_str());
   }

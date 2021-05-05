@@ -12,12 +12,12 @@
 
 monitors:
     - {
-        topic: "test_topic",
+        topic: "/octomap_binary",
         expected_hz: 10.0,
         tolerance_hz: 2.0
     } 
     - {
-        topic: "test_topic2",
+        topic: "/test_topic2",
         expected_hz: 10.0,
         tolerance_hz: 2.0
     }
