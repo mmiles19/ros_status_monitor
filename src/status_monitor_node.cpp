@@ -2,13 +2,14 @@
 #include <ros/ros.h>
 #include <topic_tools/shape_shifter.h>
 #include <std_msgs/Float32.h>
+#include <boost/shared_ptr.hpp>
 
 using namespace RosIntrospection;
 using topic_tools::ShapeShifter;
 
 XmlRpc::XmlRpcValue monitor_list;
 std::map<std::string,std::pair<ros::Time,double>> monitor_log; // topic_name, last_time, rate at last_time
-ros::Publisher freq;
+std::map<std::string,boost::shared_ptr<ros::Publisher>> publishers;
 
 void topicCallback(const ShapeShifter::ConstPtr& msg,
                    const std::string &topic_name,
@@ -21,9 +22,6 @@ void topicCallback(const ShapeShifter::ConstPtr& msg,
     ros::Time last_time = monitor_log_pair->first;
     double diff_time = curr_time.toSec()-last_time.toSec();
     double last_rate = 1.0/diff_time;
-    std_msgs::Float32 msg;
-    msg.data = last_rate;
-    freq.publish(msg);
     monitor_log_pair->first = curr_time; // update msg last_time
     monitor_log_pair->second = last_rate; // update msg rate at last_time
     return;
@@ -39,7 +37,7 @@ void checkLoopFunc(const ros::TimerEvent& event){
   for (uint i=0; i<monitor_list.size(); i++) {
     XmlRpc::XmlRpcValue monitor_it = monitor_list[i];
     ROS_ASSERT(monitor_it.getType() == XmlRpc::XmlRpcValue::TypeStruct);
-    
+
     ROS_ASSERT(monitor_it["topic"].getType() == XmlRpc::XmlRpcValue::TypeString);
     std::string topic_name = monitor_it["topic"];
 
@@ -61,7 +59,12 @@ void checkLoopFunc(const ros::TimerEvent& event){
         ros::Time last_time = monitor_log_pair->first;
         double last_rate = monitor_log_pair->second;
         // ROS_INFO("Have received msgs on %s. Last time %f. Last rate %f.", topic_name.c_str(), last_time.toSec(), last_rate);
-        
+
+        // ROS_INFO("pubbing freq");
+        std_msgs::Float32 freq_msg;
+        freq_msg.data = last_rate;
+        publishers[topic_name]->publish(freq_msg);
+
         ROS_ASSERT(monitor_it["expected_hz"].getType() == XmlRpc::XmlRpcValue::TypeDouble);
         double expected_hz = monitor_it["expected_hz"];
         ROS_ASSERT(monitor_it["tolerance_hz"].getType() == XmlRpc::XmlRpcValue::TypeDouble);
@@ -90,6 +93,9 @@ int main(int argc, char** argv){
 
   double rate;
   nh.param("rate", rate, (double)1.0);
+  // std::string param_file;
+  // nh.param("param_file", param_file, "");
+  // nh.getParam(param_file);
   nh.getParam("monitors", monitor_list);
   ROS_ASSERT(monitor_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
@@ -109,7 +115,9 @@ int main(int argc, char** argv){
     boost::function<void(const ShapeShifter::ConstPtr&)> callback = [&parser, topic_name](const ShapeShifter::ConstPtr& msg){topicCallback(msg, topic_name, parser);};
     ros::Subscriber subscriber = nh.subscribe(topic_name, 10, callback);
     subscribers.push_back(subscriber);
-    freq = nh.advertise<std_msgs::Float32>("freq", 10);
+
+    boost::shared_ptr<ros::Publisher> publisher (new ros::Publisher(nh.advertise<std_msgs::Float32>(topic_name+"/frequency", 10)));
+    publishers[topic_name] = publisher;
 
     ROS_INFO("Added monitor to %s.", topic_name.c_str());
   }
